@@ -1,89 +1,67 @@
+// AdminContext.jsx
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
 
-export const AdminAuthContext = createContext();
+export const AdminContext = createContext(null);
 
-const AdminAuthProvider = ({ children }) => {
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+export const AdminContextProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   useEffect(() => {
-    axios
-      .get("http://localhost:3000/admin/session", { withCredentials: true })
-      .then((res) => {
-        console.log("Admin Context", res.data);
-        if (res.data.isAdminAuthenticated && res.data.user?.isAdmin) {
+    // Check if there's an existing session
+    const checkSession = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/admin/session", {
+          withCredentials: true,
+        });
+
+        if (response.data.isAdminAuthenticated) {
+          setAdmin(response.data.user);
           setIsAdminAuthenticated(true);
-          setAdmin(res.data.user);
         } else {
           setIsAdminAuthenticated(false);
-          setAdmin(null);
         }
-      })
-      .catch(() => {
+      } catch (error) {
+        console.error("Session check failed:", error);
         setIsAdminAuthenticated(false);
-        setAdmin(null);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      }
+    };
+
+    checkSession();
   }, []);
-  
 
   const login = async (email, password) => {
     try {
-      const res = await axios.post(
+      const response = await axios.post(
         "http://localhost:3000/admin/adminlogin",
         { email, password },
         { withCredentials: true }
       );
-  
-      console.log("Login successful, updating context...", res.data);
-      console.log("Admin isAdmin status:", res.data.admin?.isAdmin); // Use admin.isAdmin
-  
-      // Use res.data.admin for authentication check
-      if (res.status === 200 && res.data.admin?.isAdmin) {
-        setIsAdminAuthenticated(true);
-        console.log("Admin authenticated:", res.data.admin);
-        setAdmin(res.data.admin); // Store admin details
-      } else {
-        console.error("Admin login failed: Not authorized");
-      }
+      console.log("Login successful, updating context...", response.data);
+      setAdmin(response.data.admin); // Set the admin object with isAdmin status
+      setIsAdminAuthenticated(true);
     } catch (error) {
-      console.error(
-        "Admin login failed",
-        error.response?.data || error.message
-      );
+      console.error(" Admin login failed:", error.response?.data?.message || "Not authorized");
+      setIsAdminAuthenticated(false); // Ensure the authentication state is updated
+      throw error;
     }
   };
-  
-  
 
-  const adminlogout = async () => {
+
+  const logout = async () => {
     try {
-      await axios.post(
-        "http://localhost:3000/admin/logout",
-        {},
-        { withCredentials: true }
-      );
-      setIsAdminAuthenticated(false);
+      await axios.post("http://localhost:3000/admin/logout", {}, { withCredentials: true });
       setAdmin(null);
-      
+      setIsAdminAuthenticated(false);
     } catch (error) {
-      console.error("Admin logout failed", error);
+      console.error("Logout failed:", error);
     }
   };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   return (
-    <AdminAuthContext.Provider value={{ isAdminAuthenticated, admin, login, adminlogout }}>
+    <AdminContext.Provider value={{ admin, isAdminAuthenticated, login, logout }}>
       {children}
-    </AdminAuthContext.Provider>
+    </AdminContext.Provider>
   );
 };
-
-export default AdminAuthProvider;

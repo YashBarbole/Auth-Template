@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import passport from "passport";
 import MongoStore from "connect-mongo";
 
-import initializePassport from "./config/passportConfig.js";
+import passportConfig from "./config/passportConfig.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import connectToDb from "./config/dbConfig.js";
@@ -38,9 +38,6 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
-
-// ===== Initialize Passport =====
-initializePassport();
 
 // ===== Routes =====
 app.use("/auth", authRoutes);
